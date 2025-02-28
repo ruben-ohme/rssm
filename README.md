@@ -3,9 +3,9 @@
 A simple command-line tool to connect to EC2 instances.
 
 ### Build
-`cargo build --profile=dev`
+`make build`
 
 ### Usage
-`./ohme-ssm --profile=app-dev`
+`./target/debug/ohme-ssm --profile=app-dev`
 
 ![img.png](img.png)
