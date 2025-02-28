@@ -21,7 +21,7 @@ struct Opt {
 #[tokio::main]
 async fn main() -> Result<(), ()> {
     let Opt { region, profile } = Opt::parse();
-    let instances = EC2InstanceCollection::load_instances(&region, &profile).await;
+    let instances = EC2InstanceCollection::load(&region, &profile).await;
 
     let mut cursive = cursive::default();
     cursive.load_toml(include_str!("style.toml")).unwrap();

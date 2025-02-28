@@ -6,6 +6,7 @@ pub struct EC2Instance {
     pub id: String,
     state: Option<String>,
     name: Option<String>,
+    autoscaling_group_name: Option<String>,
     health: Option<String>,
 }
 
@@ -15,6 +16,7 @@ impl EC2Instance {
             id: String::from(new_instance_id),
             name: None,
             state: None,
+            autoscaling_group_name: None,
             health: None,
         }
     }
@@ -35,6 +37,17 @@ impl EC2Instance {
     }
     pub fn set_state(&mut self, state: &str) {
         self.state = Some(String::from(state));
+    }
+
+    pub fn get_autoscaling_group_name(&self) -> String {
+        match &self.autoscaling_group_name {
+            Some(name) => String::from(name),
+            None => "(Unknown)".to_string(),
+        }
+    }
+
+    pub fn set_autoscaling_group_name(&mut self, name: &str) {
+        self.autoscaling_group_name = Some(String::from(name));
     }
 
     pub fn get_health(&self) -> String {

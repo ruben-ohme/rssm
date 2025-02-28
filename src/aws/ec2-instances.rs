@@ -1,4 +1,3 @@
-extern crate itertools;
 use crate::aws::ec2_instance::EC2Instance;
 use aws_config::meta::region::RegionProviderChain;
 use aws_config::{BehaviorVersion, Region, SdkConfig};
@@ -7,7 +6,6 @@ use aws_sdk_ec2::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize)]
 pub struct EC2InstanceCollection {
@@ -74,17 +72,21 @@ impl EC2InstanceCollection {
             }
         }
     }
-    pub async fn load_instances(region: &Option<String>, profile: &Option<String>) -> Self {
+    pub async fn load(region: &Option<String>, profile: &Option<String>) -> Self {
         let sdk_config = Self::setup_sdk(region, profile).await;
-        let ec2_client = Client::new(&sdk_config);
-
         let mut instances = EC2InstanceCollection::new();
         instances.profile = profile.clone();
         instances.region = match sdk_config.region() {
             Some(r) => Some(format!("{}", r)),
             None => None,
         };
+        Self::load_instances(&sdk_config, &mut instances).await;
+        Self::load_instance_health(&sdk_config, &mut instances).await;
+        instances
+    }
 
+    async fn load_instances(sdk_config: &SdkConfig, instances: &mut EC2InstanceCollection) {
+        let ec2_client = Client::new(&sdk_config);
         let describe_instances_result = ec2_client
             .describe_instances()
             .filters(
@@ -96,8 +98,6 @@ impl EC2InstanceCollection {
             .send()
             .await
             .unwrap();
-
-        let mut autoscaling_group_names = HashSet::new();
 
         for reservation in describe_instances_result.reservations() {
             for instance in reservation.instances() {
@@ -116,10 +116,7 @@ impl EC2InstanceCollection {
                     }
                 }
                 ec2_instance.set_name(name.unwrap_or_default());
-
-                if autoscaling_group_name.is_some() {
-                    autoscaling_group_names.insert(autoscaling_group_name.unwrap());
-                }
+                ec2_instance.set_autoscaling_group_name(autoscaling_group_name.unwrap_or_default());
 
                 let state: Option<&str> = match instance.state().unwrap().name() {
                     Some(state_new) => Some(state_new.as_str()),
@@ -130,13 +127,23 @@ impl EC2InstanceCollection {
                 instances.add_instance(ec2_instance);
             }
         }
+    }
 
+    async fn load_instance_health(sdk_config: &SdkConfig, instances: &mut EC2InstanceCollection) {
+        let mut autoscaling_group_names = HashSet::new();
+        for instance in instances.instances.iter() {
+            autoscaling_group_names.insert(instance.get_autoscaling_group_name());
+        }
+        println!("autoscaling_group_names: {:?}", autoscaling_group_names);
         let autoscaling_client = aws_sdk_autoscaling::Client::new(&sdk_config);
-
-        let v: Vec<String> = autoscaling_group_names.iter().map(|s|s.to_string()).collect();
         let describe_asg_result = autoscaling_client
             .describe_auto_scaling_groups()
-            .set_auto_scaling_group_names(Some(v))
+            .set_auto_scaling_group_names(Some(
+                autoscaling_group_names
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+            ))
             .send()
             .await
             .unwrap();
@@ -148,6 +155,7 @@ impl EC2InstanceCollection {
                 instance_healths.insert(instance_id, health_status);
             }
         }
+        println!("instance_healths: {:?}", instance_healths);
         for instance in instances.instances.iter_mut() {
             let instance_id = instance.id.as_str();
             if instance_healths.contains_key(&instance_id) {
@@ -155,9 +163,5 @@ impl EC2InstanceCollection {
                 instance.set_health(instance_health);
             }
         }
-
-        // Self::describe_auto_scaling_groups(&sdk_config, &autoscaling_groups, &instances).await;
-
-        instances
     }
 }
