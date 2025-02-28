@@ -1,12 +1,11 @@
 use clap::Parser;
 
 mod aws;
-use aws::ec2_instances::EC2GetMetadata;
 use aws::ec2_instances::EC2InstanceCollection;
 
+use cursive::Cursive;
 use cursive::traits::*;
 use cursive::views::{Dialog, Panel, SelectView};
-use cursive::Cursive;
 
 use arboard::Clipboard;
 
@@ -22,44 +21,43 @@ struct Opt {
 #[tokio::main]
 async fn main() -> Result<(), ()> {
     let Opt { region, profile } = Opt::parse();
-    let instances =
-        EC2InstanceCollection::new_from_region(region, profile, EC2GetMetadata(true)).await;
+    let instances = EC2InstanceCollection::load_instances(&region, &profile).await;
 
-    let mut cursive_runnable = cursive::default();
-    cursive_runnable.load_toml(include_str!("style.toml")).unwrap();
-    cursive_runnable.add_global_callback('q', |s| s.quit());
+    let mut cursive = cursive::default();
+    cursive.load_toml(include_str!("style.toml")).unwrap();
+    cursive.add_global_callback('q', |c| c.quit());
 
-    if !(instances.is_empty()) {
+    if !instances.is_empty() {
         let mut instance_select = SelectView::new();
-        instance_select.set_on_submit(show_cmd_dialog);
         for instance in instances.iter() {
             instance_select.add_item(
                 format!("{}", &instance),
                 format!(
                     "aws ssm start-session --target {}{}{}",
                     &instance.id,
-                    &instances.get_profile(),
                     &instances.get_region(),
+                    &instances.get_profile(),
                 ),
             );
         }
         instance_select.sort_by(|a, b| a.cmp(b));
-        cursive_runnable.add_layer(
+        instance_select.set_on_submit(show_cmd_dialog);
+        cursive.add_layer(
             Panel::new(instance_select)
                 .title("Select an instance")
                 .full_screen(),
         );
     } else {
-        let no_instances_error_string =
-            "No Instances were returned.\nCheck your region and AWS Credentials settings."
-                .to_string();
-        cursive_runnable.add_layer(
-            Dialog::text(no_instances_error_string)
-                .title("Error")
-                .button("Close", |s| s.quit()), //Default!
+        cursive.add_layer(
+            Dialog::text(
+                "No Instances were returned.\nCheck your region and AWS Credentials settings."
+                    .to_string(),
+            )
+            .title("Error")
+            .button("Close", |c| c.quit()), //Default!
         )
     }
-    cursive_runnable.run();
+    cursive.run();
     Ok(())
 }
 

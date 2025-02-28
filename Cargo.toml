@@ -4,14 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-cursive = { version = "0.21.1", features = ["toml"] }
-tokio = { version = "1.43.0", features = ["rt", "rt-multi-thread", "macros"] }
-clap = { version = "4.5.31", features = ["derive"] }
 arboard = "3.4.1"
 aws-config = "1.5.17"
+aws-sdk-autoscaling = "1.68.0"
 aws-sdk-ec2 = "1.113.0"
+clap = { version = "4.5.31", features = ["derive"] }
+cursive = { version = "0.21.1", features = ["toml"] }
+itertools = "0.14.0"
 serde = { version = "1.0.218", features = ["derive"] }
-
+tokio = { version = "1.43.0", features = ["rt", "rt-multi-thread", "macros"] }
 
 [profile.dev]
 incremental = true
