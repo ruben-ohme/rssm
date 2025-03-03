@@ -36,26 +36,16 @@ async fn main() -> Result<(), ()> {
     cursive.load_toml(include_str!("style.toml")).unwrap();
     cursive.add_global_callback('q', |c| c.quit());
 
-    let region_param = match &region {
-        Some(region_string) => region_string.to_string(),
-        None => String::new(),
-    };
-    let profile_param = match &profile {
-        Some(profile_string) => profile_string.to_string(),
-        None => String::new(),
-    };
-
     if !instances.is_empty() {
         let mut instance_select = SelectView::new();
         for instance in instances.iter() {
             instance_select.add_item(
                 format!("{}", &instance),
-                format!(
-                    "{} {} {}",
-                    &instance.get_name(),
-                    region_param,
-                    profile_param
-                ),
+                SessionManagerParams {
+                    region: region.clone(),
+                    profile: profile.clone(),
+                    target: instance.id.clone(),
+                },
             );
         }
         instance_select.set_on_submit(show_cmd_dialog);
@@ -85,11 +75,16 @@ fn spawn_ssm_process(msg_input: &'static str) {
     std::process::exit(0);
 }
 
-fn show_cmd_dialog(cursive: &mut Cursive, msg_input: &str) {
+fn show_cmd_dialog(cursive: &mut Cursive, msg_input: &SessionManagerParams) {
     let mut clipboard = Clipboard::new().unwrap();
-    clipboard.set_text(msg_input).unwrap();
+    let str = format!(
+        "aws ssm start-session --target {} --profile {}",
+        msg_input.target,
+        msg_input.profile.clone().unwrap_or_default()
+    );
+    clipboard.set_text(str.clone()).unwrap();
     cursive.add_layer(
-        Dialog::text(format!("{}\n Copied to clipboard.", msg_input))
+        Dialog::text(str)
             .title("Connect")
             .button("Close", |c| c.quit()) //Default!
             .button("Back", |c| close_page(c)),
