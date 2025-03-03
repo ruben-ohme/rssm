@@ -1,12 +1,13 @@
 use arboard::Clipboard;
 use clap::Parser;
+use std::process::Command;
 
 mod aws;
 use aws::ec2_instances::EC2InstanceCollection;
 
 use cursive::traits::*;
 use cursive::views::{Dialog, Panel, SelectView};
-use cursive::Cursive;
+use cursive::{Cursive, CursiveRunnable};
 
 use aws_config::meta::region::RegionProviderChain;
 use aws_config::{BehaviorVersion, Region, SdkConfig};
@@ -36,6 +37,19 @@ async fn main() -> Result<(), ()> {
     cursive.load_toml(include_str!("style.toml")).unwrap();
     cursive.add_global_callback('q', |c| c.quit());
 
+    if instances.is_empty() {
+        let logged_in = sso_login(&mut cursive, &profile);
+        if (!logged_in) {
+            cursive.add_layer(
+                Dialog::text(
+                    "No Instances were returned.\nCheck your region and AWS Credentials settings."
+                        .to_string(),
+                )
+                .title("Error")
+                .button("Close", |c| c.quit()),
+            );
+        }
+    }
     if !instances.is_empty() {
         let mut instance_select = SelectView::new();
         for instance in instances.iter() {
@@ -48,39 +62,66 @@ async fn main() -> Result<(), ()> {
                 },
             );
         }
-        instance_select.set_on_submit(show_cmd_dialog);
+        instance_select.set_on_submit(spawn_ssm_process);
         cursive.add_layer(
             Panel::new(instance_select)
                 .title("Select an instance")
                 .full_screen(),
         );
-    } else {
-        cursive.add_layer(
-            Dialog::text(
-                "No Instances were returned.\nCheck your region and AWS Credentials settings."
-                    .to_string(),
-            )
-            .title("Error")
-            .button("Close", |c| c.quit()),
-        )
     }
     cursive.run();
     Ok(())
 }
 
-fn spawn_ssm_process(msg_input: &'static str) {
-    let mut binding = std::process::Command::new("aws");
-    let cmd = binding.arg("ssm").arg("start-session").arg(msg_input);
-    cmd.spawn().unwrap();
-    std::process::exit(0);
+fn sso_login(cursive: &mut CursiveRunnable, profile: &Option<String>) -> bool {
+    let mut p = profile.clone().unwrap_or_default();
+    cursive
+        .add_layer(Dialog::text(format!("Logging in using profile {}", p)).title("AWS SSO Login"));
+    let cmd = Command::new("aws")
+        .args(["sso", "login", "--profile", p.as_str()])
+        .spawn();
+    match cmd {
+        Ok(mut child) => {
+            close_page(cursive);
+            child.wait().unwrap();
+            true
+        }
+        Err(e) => {
+            close_page(cursive);
+            cursive.add_layer(
+                Dialog::text(format!("Error: {}", e))
+                    .title("Error")
+                    .button("Back", |c| close_page(c)),
+            );
+            false
+        }
+    }
 }
 
-fn show_cmd_dialog(cursive: &mut Cursive, msg_input: &SessionManagerParams) {
+fn spawn_ssm_process(cursive: &mut Cursive, params: &SessionManagerParams) {
+    show_cmd_dialog(cursive, params);
+    let cmd = Command::new("aws")
+        .args([
+            "ssm",
+            "start-session",
+            "--profile",
+            &params.profile.clone().unwrap_or_default(),
+            "--target",
+            &params.target,
+        ])
+        .stdout(std::process::Stdio::piped())
+        .stdin(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn();
+    // std::process::exit(0);
+}
+
+fn show_cmd_dialog(cursive: &mut Cursive, params: &SessionManagerParams) {
     let mut clipboard = Clipboard::new().unwrap();
     let str = format!(
         "aws ssm start-session --target {} --profile {}",
-        msg_input.target,
-        msg_input.profile.clone().unwrap_or_default()
+        params.target,
+        params.profile.clone().unwrap_or_default()
     );
     clipboard.set_text(str.clone()).unwrap();
     cursive.add_layer(
