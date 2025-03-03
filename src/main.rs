@@ -39,7 +39,7 @@ async fn main() -> Result<(), ()> {
 
     if instances.is_empty() {
         let logged_in = sso_login(&mut cursive, &profile);
-        if (!logged_in) {
+        if !logged_in {
             cursive.add_layer(
                 Dialog::text(
                     "No Instances were returned.\nCheck your region and AWS Credentials settings."
@@ -74,7 +74,7 @@ async fn main() -> Result<(), ()> {
 }
 
 fn sso_login(cursive: &mut CursiveRunnable, profile: &Option<String>) -> bool {
-    let mut p = profile.clone().unwrap_or_default();
+    let p = profile.clone().unwrap_or_default();
     cursive
         .add_layer(Dialog::text(format!("Logging in using profile {}", p)).title("AWS SSO Login"));
     let cmd = Command::new("aws")

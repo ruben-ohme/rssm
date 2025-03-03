@@ -130,3 +130,67 @@ impl EC2InstanceCollection {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::aws::ec2_instance::EC2Instance;
+
+    #[test]
+    fn test_ec2instancecollection_new() {
+        let collection = EC2InstanceCollection::new();
+        assert_eq!(collection.region, None);
+        assert_eq!(collection.profile, None);
+        assert!(collection.instances.is_empty());
+    }
+
+    #[test]
+    fn test_ec2instancecollection_add_instance() {
+        let mut collection = EC2InstanceCollection::new();
+        let instance = EC2Instance::new("i-abcdef1234567890");
+        collection.add_instance(instance.clone());
+        assert_eq!(collection.instances.len(), 1);
+        assert_eq!(collection.instances[0].id, instance.id);
+    }
+
+    #[test]
+    fn test_ec2instancecollection_is_empty() {
+        let collection = EC2InstanceCollection::new();
+        assert!(collection.is_empty());
+
+        let mut collection_with_instance = EC2InstanceCollection::new();
+        collection_with_instance.add_instance(EC2Instance::new("i-abcdef1234567890"));
+        assert!(!collection_with_instance.is_empty());
+    }
+
+    #[test]
+    fn test_ec2instancecollection_iter() {
+        let mut collection = EC2InstanceCollection::new();
+        let instance1 = EC2Instance::new("i-abcdef1234567890");
+        let instance2 = EC2Instance::new("i-ghijkl1234567890");
+
+        collection.add_instance(instance1.clone());
+        collection.add_instance(instance2.clone());
+
+        let mut iter = collection.iter();
+        assert_eq!(iter.next().unwrap().id, instance1.id);
+        assert_eq!(iter.next().unwrap().id, instance2.id);
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn test_ec2instancecollection_display() {
+        let mut collection = EC2InstanceCollection::new();
+        let instance1 = EC2Instance::new("i-abcdef1234567890");
+        let instance2 = EC2Instance::new("i-ghijkl1234567890");
+
+        collection.add_instance(instance1);
+        collection.add_instance(instance2);
+
+        let display = format!("{}", collection);
+        assert!(display.contains("i-abcdef1234567890"));
+        assert!(display.contains("i-ghijkl1234567890"));
+        assert!(display.contains("Instances: \n"));
+    }
+}
