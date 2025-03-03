@@ -1,8 +1,6 @@
 use crate::aws::ec2_instance::EC2Instance;
-use aws_config::meta::region::RegionProviderChain;
-use aws_config::{BehaviorVersion, Region, SdkConfig};
+use aws_config::SdkConfig;
 use aws_sdk_ec2::types::Filter;
-use aws_sdk_ec2::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -28,18 +26,6 @@ impl EC2InstanceCollection {
     pub fn is_empty(&self) -> bool {
         self.instances.is_empty()
     }
-    pub fn get_region(&self) -> String {
-        match &self.region {
-            Some(region) => format!(" --region {}", region),
-            None => String::new(),
-        }
-    }
-    pub fn get_profile(&self) -> String {
-        match &self.profile {
-            Some(profile) => format!(" --profile {}", profile),
-            None => String::new(),
-        }
-    }
     fn add_instance(&mut self, instance: EC2Instance) {
         self.instances.push(instance);
     }
@@ -53,41 +39,20 @@ impl EC2InstanceCollection {
             profile: None,
         }
     }
-    async fn setup_sdk(region: &Option<String>, profile: &Option<String>) -> SdkConfig {
-        let region_provider = RegionProviderChain::first_try(region.clone().map(Region::new))
-            .or_default_provider()
-            .or_else(Region::new("eu-west-1"));
-        match &profile {
-            Some(profile_string) => {
-                aws_config::defaults(BehaviorVersion::latest())
-                    .profile_name(profile_string)
-                    .load()
-                    .await
-            }
-            None => {
-                aws_config::defaults(BehaviorVersion::latest())
-                    .region(region_provider)
-                    .load()
-                    .await
-            }
-        }
-    }
-    pub async fn load(region: &Option<String>, profile: &Option<String>) -> Self {
-        let sdk_config = Self::setup_sdk(region, profile).await;
+    pub async fn load(config: &SdkConfig) -> Self {
         let mut instances = EC2InstanceCollection::new();
-        instances.profile = profile.clone();
-        instances.region = match sdk_config.region() {
+        instances.region = match config.region() {
             Some(r) => Some(format!("{}", r)),
             None => None,
         };
-        Self::load_instances(&sdk_config, &mut instances).await;
-        Self::load_instance_health(&sdk_config, &mut instances).await;
+        Self::load_instances(&config, &mut instances).await;
+        Self::load_instance_health(&config, &mut instances).await;
         instances
     }
 
-    async fn load_instances(sdk_config: &SdkConfig, instances: &mut EC2InstanceCollection) {
-        let ec2_client = Client::new(&sdk_config);
-        let describe_instances_result = ec2_client
+    async fn load_instances(config: &SdkConfig, instances: &mut EC2InstanceCollection) {
+        let client = aws_sdk_ec2::Client::new(&config);
+        let describe_instances_result = client
             .describe_instances()
             .filters(
                 Filter::builder()
@@ -129,14 +94,14 @@ impl EC2InstanceCollection {
         }
     }
 
-    async fn load_instance_health(sdk_config: &SdkConfig, instances: &mut EC2InstanceCollection) {
+    async fn load_instance_health(config: &SdkConfig, instances: &mut EC2InstanceCollection) {
         let mut autoscaling_group_names = HashSet::new();
         for instance in instances.instances.iter() {
             autoscaling_group_names.insert(instance.get_autoscaling_group_name());
         }
         println!("autoscaling_group_names: {:?}", autoscaling_group_names);
-        let autoscaling_client = aws_sdk_autoscaling::Client::new(&sdk_config);
-        let describe_asg_result = autoscaling_client
+        let client = aws_sdk_autoscaling::Client::new(&config);
+        let describe_asg_result = client
             .describe_auto_scaling_groups()
             .set_auto_scaling_group_names(Some(
                 autoscaling_group_names
