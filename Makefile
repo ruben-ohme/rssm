@@ -8,10 +8,10 @@ release: clean
 	mkdir -p bin
 	rm -rf bin/*
 	cargo build --release
-	cp target/release/ohme-ssm bin/ohme-ssm
+	cp target/release/rssm bin/rssm
 
 run: build
-	./target/debug/ohme-ssm
+	./target/debug/rssm
 
 clean:
 	cargo clean

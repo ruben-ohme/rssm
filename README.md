@@ -1,4 +1,4 @@
-# ohme-ssm
+# rssm
 
 A simple command-line tool to connect to EC2 instances.
 
@@ -6,6 +6,6 @@ A simple command-line tool to connect to EC2 instances.
 `make build`
 
 ### Usage
-`./target/debug/ohme-ssm --profile=app-dev`
+`./target/debug/rssm --profile=app-dev`
 
-![img.png](img.png)
+![img.png](docs/img/img.png)![img.png](docs/img/img.png)
