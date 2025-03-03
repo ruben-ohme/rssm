@@ -62,7 +62,7 @@ async fn main() -> Result<(), ()> {
                 },
             );
         }
-        instance_select.set_on_submit(spawn_ssm_process);
+        instance_select.set_on_submit(show_cmd_dialog);
         cursive.add_layer(
             Panel::new(instance_select)
                 .title("Select an instance")
