@@ -7,7 +7,7 @@ edition = "2024"
 arboard = "3.4.1"
 aws-config = { version = "1.5.17", features = ["behavior-version-latest"] }
 aws-sdk-autoscaling = "1.68.0"
-aws-sdk-ec2 = "1.113.0"
+aws-sdk-ec2 = "1.114.0"
 clap = { version = "4.5.31", features = ["derive"] }
 cursive = { version = "0.21.1", features = ["toml"] }
 serde = { version = "1.0.218", features = ["derive"] }

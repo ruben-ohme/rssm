@@ -23,4 +23,9 @@ aws sso login --profile app-dev
 ./target/debug/rssm --profile app-dev
 ```
 
+Then just paste from clipboard to connect:
+```shell
+aws ssm start-session --target <id> --profile <profile>
+```
+
 ![img.png](docs/img/img.png)
