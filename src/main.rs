@@ -59,6 +59,7 @@ async fn main() -> Result<(), ()> {
             sorted_instances.push(instance.clone());
         }
         sorted_instances.sort_by_key(|i| i.id.clone());
+        sorted_instances.sort_by_key(|i| i.get_health());
         sorted_instances.sort_by_key(|i| i.get_name());
         for instance in sorted_instances.iter() {
             instance_select_view.add_item(

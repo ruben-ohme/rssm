@@ -1,28 +1,43 @@
 # Every field in a theme file is optional.
 
-# First come some various options
-shadow = false  # Don't draw shadows around stacked views
-borders = "simple"  # Alternatives are "none" and "outset"
+shadow = false
+borders = "simple" # Alternatives are "none" and "outset"
 
-# Here we define the color palette.
+# Base colors are red, green, blue,
+# cyan, magenta, yellow, white and black.
 [colors]
-background = "#24273a"
-# If the value is an array, the first valid color will be used.
-# If the terminal doesn't support custom color,
+# There are 3 ways to select a color:
+# - The 16 base colors are selected by name:
+#       "blue", "light red", "magenta", ...
+# - Low-resolution colors use 3 characters, each <= 5:
+#       "541", "003", ...
+# - Full-resolution colors start with '#' and can be 3 or 6 hex digits:
+#       "#1A6", "#123456", ...
+
+# If the value is an array, the first valid
+# and supported color will be used.
+background = ["#24273a"]
+
+# If the terminal doesn't support custom color (like the linux TTY),
 # non-base colors will be skipped.
-shadow = ["#24273a"]
+shadow = "#1e2030"
 view = "#24273a"
 
-# Array and simple values have the same effect.
-primary = ["#f4dbd6"]
-secondary = "#24273a"
-tertiary = "#8087a2"
+# An array with a single value has the same effect as a simple value.
+primary = ["white"]
+secondary = "#6e738d"
+tertiary = "#363a4f"
 
 # Hex values can use lower or uppercase.
 # (base color MUST be lowercase)
-title_primary = "red"
-title_secondary = "blue"
+title_primary = ["BLUE", "#eed49f"] # `BLUE` will be skipped.
+title_secondary = "#8aadf4"
 
 # Lower precision values can use only 3 digits.
-highlight = "#939ab740"
-highlight_inactive = "#363a4f"
+#highlight = "#7dc4e4"
+highlight_inactive = "#6e738d"
+
+[styles.highlight]
+effects = []
+front = "#ed8796"
+back = "inherit_parent"
