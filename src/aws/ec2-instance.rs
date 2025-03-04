@@ -5,7 +5,7 @@ use std::fmt;
 pub struct EC2Instance {
     pub id: String,
     state: Option<String>,
-    name: Option<String>,
+    pub name: Option<String>,
     autoscaling_group_name: Option<String>,
     health: Option<String>,
 }

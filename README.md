@@ -19,7 +19,8 @@ make build
 ### Usage
 
 ```shell
-./target/debug/rssm --profile=app-dev
+aws sso login --profile app-dev
+./target/debug/rssm --profile app-dev
 ```
 
 ![img.png](docs/img/img.png)

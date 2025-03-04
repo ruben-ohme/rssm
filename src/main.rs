@@ -3,6 +3,7 @@ use clap::Parser;
 use std::process::Command;
 
 mod aws;
+use aws::ec2_instance::EC2Instance;
 use aws::ec2_instances::EC2InstanceCollection;
 
 use cursive::traits::*;
@@ -31,6 +32,7 @@ struct SessionManagerParams {
 async fn main() -> Result<(), ()> {
     let Opt { region, profile } = Opt::parse();
     let sdk_config = setup_sdk(&region, &profile).await;
+    // TODO: handle SSO auth here
     let instances = EC2InstanceCollection::load(&sdk_config).await;
 
     let mut cursive = cursive::default();
@@ -46,14 +48,20 @@ async fn main() -> Result<(), ()> {
                         .to_string(),
                 )
                 .title("Error")
-                .button("Close", |c| c.quit()),
+                .button("Quit", |c| c.quit()),
             );
         }
     }
     if !instances.is_empty() {
-        let mut instance_select = SelectView::new();
+        let mut instance_select_view = SelectView::new();
+        let mut sorted_instances: Vec<EC2Instance> = Vec::new();
         for instance in instances.iter() {
-            instance_select.add_item(
+            sorted_instances.push(instance.clone());
+        }
+        sorted_instances.sort_by_key(|i| i.id.clone());
+        sorted_instances.sort_by_key(|i| i.get_name());
+        for instance in sorted_instances.iter() {
+            instance_select_view.add_item(
                 format!("{}", &instance),
                 SessionManagerParams {
                     region: region.clone(),
@@ -62,9 +70,9 @@ async fn main() -> Result<(), ()> {
                 },
             );
         }
-        instance_select.set_on_submit(show_cmd_dialog);
+        instance_select_view.set_on_submit(show_cmd_dialog);
         cursive.add_layer(
-            Panel::new(instance_select)
+            Panel::new(instance_select_view)
                 .title("Select an instance")
                 .full_screen(),
         );
