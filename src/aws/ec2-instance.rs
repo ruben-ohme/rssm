@@ -75,7 +75,7 @@ impl EC2Instance {
 
 impl fmt::Display for EC2Instance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} {} {}", self.id, self.get_health(), self.get_name(),)
+        write!(f, "{} {} {}", self.id, self.get_health(), self.get_name(),)
     }
 }
 
